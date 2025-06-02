@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>寵物客製化菜單AI顧問</title>
+    <style>
+        body { font-family: 'Noto Sans TC', Arial, sans-serif; max-width: 430px; margin: 32px auto; background: #f8fafc;}
+        #chat-box { border:1px solid #c0d0e0; border-radius: 10px; padding:18px; height:390px; overflow-y:auto; background:#fff;}
+        .msg { margin:8px 0;}
+        .user { text-align: right; color:#3894d3;}
+        .bot { text-align: left; color:#27406b;}
+        #user-input { width: 80%; padding:7px; border-radius:4px; border:1px solid #b0c4de;}
+        #send-btn { padding:7px 16px; background:#38b6ff; color:#fff; border:none; border-radius:5px;}
+    </style>
+</head>
+<body>
+    <h2>毛孩專屬AI菜單顧問</h2>
+    <div id="chat-box">
+      <div class="msg bot">您好！我是嗷嗚好吃AI營養顧問，請問今天想幫哪一位毛孩諮詢飲食呢？</div>
+    </div>
+    <div style="margin-top:10px;">
+        <input type="text" id="user-input" placeholder="請輸入問題..." autocomplete="off"/>
+        <button id="send-btn">送出</button>
+    </div>
+
+    <script>
+        // !!! 測試用: 將此 API KEY 換成你自己的。正式部署務必改後端呼叫。
+        const apiKey = "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";
+
+        async function callOpenAI(message) {
+            const url = "https://api.openai.com/v1/chat/completions";
+            const headers = {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`
+            };
+            // 這裡可以用 prompt 增強AI「角色」
+            const sysPrompt = `你是一個專業寵物餐食營養顧問AI，會依據飼主輸入的寵物資訊（名字、年齡、體型、健康需求、口味偏好），推薦合適的客製化主餐、副餐、甜點，並能解釋每道菜的營養重點與特色，最後報價並引導飼主選擇訂閱或單次購買。回覆要親切活潑、簡明易懂。`;
+
+            const body = JSON.stringify({
+                model: "gpt-4.1-mini",
+                messages: [
+                  { role: "system", content: sysPrompt },
+                  { role: "user", content: message }
+                ],
+                temperature: 0.6
+            });
+            const res = await fetch(url, { method: "POST", headers, body });
+            const data = await res.json();
+            return data.choices[0].message.content;
+        }
+
+        // UI互動
+        const chatBox = document.getElementById("chat-box");
+        const userInput = document.getElementById("user-input");
+        const sendBtn = document.getElementById("send-btn");
+
+        function appendMsg(msg, sender) {
+            const div = document.createElement("div");
+            div.className = "msg " + sender;
+            div.innerText = msg;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        sendBtn.onclick = async function() {
+            const msg = userInput.value.trim();
+            if (!msg) return;
+            appendMsg("你：" + msg, "user");
+            userInput.value = "";
+            appendMsg("AI思考中...", "bot");
+            try {
+                const reply = await callOpenAI(msg);
+                chatBox.removeChild(chatBox.lastChild);
+                appendMsg("AI：" + reply, "bot");
+            } catch {
+                chatBox.removeChild(chatBox.lastChild);
+                appendMsg("⚠️ AI 回覆失敗，請稍後再試", "bot");
+            }
+        };
+        userInput.addEventListener('keydown', function(e){
+            if(e.key === 'Enter') sendBtn.click();
+        });
+    </script>
+</body>
+</html>
